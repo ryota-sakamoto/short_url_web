@@ -5,3 +5,4 @@ authors = ["ryota-sakamoto <sakamo.ryota+github@gmail.com>"]
 
 [dependencies]
 actix-web = "0.6"
+mysql = "14.0.0"
