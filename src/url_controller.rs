@@ -5,7 +5,6 @@ use actix_web::{
     Responder,
     Path,
 };
-use mysql::from_row;
 use std::sync::Arc;
 use ApplicationState;
 
@@ -18,10 +17,7 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
         select url from url_list where id = :id
     ", params!{
         "id" => id,
-    }).unwrap().map(|r| {
-        let url = from_row(r);
-        url
-    });
+    }).unwrap().map(::mysql::from_row);
 
     match url_opt {
         Some(u) => {
