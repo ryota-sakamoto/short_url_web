@@ -1,4 +1,5 @@
 extern crate actix_web;
+#[macro_use]
 extern crate mysql;
 
 use actix_web::{
@@ -10,12 +11,13 @@ use std::sync::Arc;
 mod url_controller;
 mod user_controller;
 
+#[derive(Debug)]
 pub struct ApplicationState {
     pool: mysql::Pool,
 }
 
 fn main() {
-    let pool = mysql::Pool::new("mysql://root:root@172.17.0.2:3306").unwrap();
+    let pool = mysql::Pool::new("mysql://root:root@172.17.0.2:3306/short_url").unwrap();
     let state = Arc::new(ApplicationState {
         pool: pool
     });
