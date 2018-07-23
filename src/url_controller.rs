@@ -12,6 +12,12 @@ use actix_web::{
 use futures::future::Future;
 use std::sync::Arc;
 use ApplicationState;
+use rand::{
+    Rng,
+    thread_rng,
+};
+
+const ID_LEN: usize = 8;
 
 pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
     let path = req.path();
@@ -62,10 +68,21 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
     pool.prep_exec(r"
         insert into url_list values(:id, :url)
     ", params!{
-        "id" => "id",
+        "id" => generate_id(),
         "url" => req.url
     });
     Ok(HttpResponse::Ok().finish())
+}
+
+fn generate_id() -> String {
+    let char_vec: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".chars().collect();
+    let mut rng = thread_rng();
+    let mut id = String::new();
+    for _ in 0..ID_LEN {
+        let n = rng.gen_range(0, char_vec.len());
+        id.push(char_vec[n]);
+    }
+    id
 }
 
 fn validate_url(req: RegisterRequest) -> Result<RegisterRequest, Error> {

@@ -2,6 +2,7 @@ extern crate actix_web;
 #[macro_use] extern crate mysql;
 #[macro_use] extern crate serde_derive;
 extern crate futures;
+extern crate rand;
 
 use actix_web::{
     server,
