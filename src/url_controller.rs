@@ -1,10 +1,15 @@
 use actix_web::{
     http::StatusCode,
+    error,
+    Error,
     HttpRequest,
+    HttpMessage,
     HttpResponse,
+    AsyncResponder,
     Responder,
     Path,
 };
+use futures::future::Future;
 use std::sync::Arc;
 use ApplicationState;
 
@@ -34,9 +39,31 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
     }
 }
 
-pub fn register_url(_: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
-    HttpResponse::new(StatusCode::NOT_IMPLEMENTED)
+#[derive(Debug, Serialize, Deserialize)]
+struct RegisterRequest {
+    url: String,
 }
+
+pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl Responder, Error=Error>> {
+    req.json()
+        .from_err()
+        .and_then(validate_url)
+        .and_then(register_url)
+        .responder()
+}
+
+fn register_url(req: RegisterRequest) -> Result<impl Responder, Error> {
+    Ok(HttpResponse::Ok().finish())
+}
+
+fn validate_url(req: RegisterRequest) -> Result<RegisterRequest, Error> {
+    if req.url.starts_with("http://") || req.url.starts_with("https://") {
+        Ok(req)
+    } else {
+        Err(error::ErrorBadRequest(""))
+    }
+}
+
 pub fn remove_url(_: HttpRequest) -> impl Responder {
     HttpResponse::new(StatusCode::NOT_IMPLEMENTED)
 }
