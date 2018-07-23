@@ -45,14 +45,26 @@ struct RegisterRequest {
 }
 
 pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl Responder, Error=Error>> {
+    let pool = {
+        let r = req.clone();
+        let state = r.state();
+        state.pool.clone()
+    };
     req.json()
         .from_err()
         .and_then(validate_url)
-        .and_then(register_url)
+        .and_then(move |v| register_url(v, pool))
         .responder()
 }
 
-fn register_url(req: RegisterRequest) -> Result<impl Responder, Error> {
+// TODO
+fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
+    pool.prep_exec(r"
+        insert into url_list values(:id, :url)
+    ", params!{
+        "id" => "id",
+        "url" => req.url
+    });
     Ok(HttpResponse::Ok().finish())
 }
 
