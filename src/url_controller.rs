@@ -70,7 +70,9 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
     ", params!{
         "id" => generate_id(),
         "url" => req.url
-    });
+    }).map_err(|_| {
+        error::ErrorInternalServerError("")
+    })?;
     Ok(HttpResponse::Ok().finish())
 }
 
