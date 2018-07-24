@@ -50,6 +50,11 @@ struct RegisterRequest {
     url: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct RegisterResponse {
+    id: String,
+}
+
 pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl Responder, Error=Error>> {
     let pool = {
         let r = req.clone();
@@ -63,17 +68,21 @@ pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl
         .responder()
 }
 
-// TODO
+// TODO transaction
 fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
+    let id = generate_id();
     pool.prep_exec(r"
         insert into url_list values(:id, :url)
     ", params!{
-        "id" => generate_id(),
+        "id" => id.clone(),
         "url" => req.url
     }).map_err(|_| {
         error::ErrorInternalServerError("")
-    })?;
-    Ok(HttpResponse::Ok().finish())
+    }).map(|_| {
+        Ok(HttpResponse::Ok().json(RegisterResponse {
+            id: id,
+        }))
+    })?
 }
 
 fn generate_id() -> String {
