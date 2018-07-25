@@ -15,7 +15,10 @@ use actix_web::{
     },
     HttpRequest,
 };
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    env,
+};
 mod url_controller;
 mod user_controller;
 
@@ -35,7 +38,9 @@ impl<S> Middleware<S> for PostMiddleware {
 }
 
 fn main() {
-    let pool = mysql::Pool::new("mysql://root:root@172.17.0.2:3306/short_url").unwrap();
+    let db_ip = env::var_os("SHORT_URL_DB_IP").expect("SET SHORT_URL_DB_IP").into_string().unwrap();
+
+    let pool = mysql::Pool::new(format!("mysql://root:root@{}:3306/short_url", db_ip)).unwrap();
     let state = Arc::new(ApplicationState {
         pool: pool
     });
