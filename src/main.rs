@@ -40,7 +40,7 @@ impl<S> Middleware<S> for PostMiddleware {
 fn main() {
     let db_ip = env::var_os("SHORT_URL_DB_IP").expect("SET SHORT_URL_DB_IP").into_string().unwrap();
 
-    let pool = mysql::Pool::new(format!("mysql://root:root@{}:3306/short_url", db_ip)).unwrap();
+    let pool = mysql::Pool::new(format!("mysql://root:root@{}:3306/short_url", db_ip)).expect("MySQL Pool Error");
     let state = Arc::new(ApplicationState {
         pool: pool
     });
@@ -51,6 +51,6 @@ fn main() {
             .route("/register", http::Method::POST, url_controller::register)
             .route("/{id}", http::Method::GET, url_controller::get_url)
     }).bind("127.0.0.1:8080")
-    .unwrap()
+    .expect("Server init error")
     .run();
 }
