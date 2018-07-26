@@ -19,7 +19,7 @@ use rand::{
 
 const ID_LEN: usize = 8;
 
-pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
+pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder, Error> {
     let path = req.path();
     let id = path.replacen("/", "", 1);
 
@@ -28,9 +28,14 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
         select url from url_list where id = :id
     ", params!{
         "id" => id,
-    }).unwrap().map(::mysql::from_row);
+    }).map(|r| {
+        r.map(::mysql::from_row)
+    }).map_err(|e| {
+        println!("[Error]{:?}", e);
+        error::ErrorInternalServerError("")
+    })?;
 
-    match url_opt {
+    Ok(match url_opt {
         Some(u) => {
             HttpResponse::Ok()
                 .status(StatusCode::MOVED_PERMANENTLY)
@@ -42,7 +47,7 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> impl Responder {
                 .status(StatusCode::NOT_FOUND)
                 .finish()
         },
-    }
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize)]
