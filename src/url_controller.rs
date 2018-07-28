@@ -16,6 +16,10 @@ use rand::{
     Rng,
     thread_rng,
 };
+// use crypto::{
+//     sha2::Sha256,
+//     digest::Digest,
+// };
 
 const ID_LEN: usize = 8;
 
@@ -53,6 +57,7 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
 #[derive(Debug, Serialize, Deserialize)]
 struct RegisterRequest {
     url: String,
+    password: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,18 +81,32 @@ pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl
 // TODO transaction
 fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
     let id = generate_id();
-    pool.prep_exec(r"
-        insert into url_list values(:id, :url)
-    ", params!{
-        "id" => id.clone(),
-        "url" => req.url
-    }).map_err(|_| {
-        error::ErrorInternalServerError("")
-    }).map(|_| {
-        Ok(HttpResponse::Ok().json(RegisterResponse {
-            id: id,
-        }))
-    })?
+    let new_password = req.password.map(|s| s + &id.clone());
+    let url = req.url;
+
+    let stat = pool.prepare(if new_password.is_some() {
+        "insert into url_list values(:id, :password, :url)"
+    } else {
+        "insert into url_list values(:id, null, :url)"
+    });
+
+    match stat {
+        Ok(mut s) => {
+            s.execute(params!{
+                "id" => id.clone(),
+                "url" => url
+            }).map_err(|e| {
+                error::ErrorInternalServerError(e)
+            }).map(|_| {
+                Ok(HttpResponse::Ok().json(RegisterResponse {
+                    id: id,
+                }))
+            })?
+        },
+        Err(e) => {
+            Err(error::ErrorInternalServerError(e))
+        },
+    }
 }
 
 fn generate_id() -> String {

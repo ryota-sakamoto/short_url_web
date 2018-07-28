@@ -3,6 +3,7 @@ extern crate actix_web;
 #[macro_use] extern crate serde_derive;
 extern crate futures;
 extern crate rand;
+extern crate crypto;
 
 use actix_web::{
     server,
