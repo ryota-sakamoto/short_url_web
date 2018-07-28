@@ -16,10 +16,10 @@ use rand::{
     Rng,
     thread_rng,
 };
-// use crypto::{
-//     sha2::Sha256,
-//     digest::Digest,
-// };
+use crypto::{
+    sha2::Sha256,
+    digest::Digest,
+};
 
 const ID_LEN: usize = 8;
 
@@ -94,8 +94,14 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
         Ok(mut s) => {
             s.execute(params!{
                 "id" => id.clone(),
+                "password" => if let Some(p) = new_password {
+                    sha256(&p)
+                } else {
+                    "".to_string()
+                },
                 "url" => url
             }).map_err(|e| {
+                println!("{}", e);
                 error::ErrorInternalServerError(e)
             }).map(|_| {
                 Ok(HttpResponse::Ok().json(RegisterResponse {
@@ -126,6 +132,12 @@ fn validate_url(req: RegisterRequest) -> Result<RegisterRequest, Error> {
     } else {
         Err(error::ErrorBadRequest(""))
     }
+}
+
+fn sha256(s: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.input_str(s);
+    hasher.result_str()
 }
 
 pub fn remove_url(_: HttpRequest) -> impl Responder {
