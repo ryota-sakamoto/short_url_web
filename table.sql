@@ -5,4 +5,4 @@ create table url_list (
     password varchar(64),
     url varchar(255) not null
 );
-create index url_list_index on url_list(id);
+create index url_list_index on url_list(id, password);

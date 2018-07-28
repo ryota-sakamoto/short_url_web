@@ -26,12 +26,23 @@ const ID_LEN: usize = 8;
 pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder, Error> {
     let path = req.path();
     let id = path.replacen("/", "", 1);
+    let q = req.query();
+    let new_password = q.get("password").map(|s| format!("{}{}", s, id));
 
     let state = req.state();
-    let url_opt: Option<String> = state.pool.first_exec(r"
-        select url from url_list where id = :id
-    ", params!{
+    let url_opt: Option<String> = state.pool.first_exec(
+        if new_password.is_some() {
+            "select url from url_list where id = :id and password = :password"
+        } else {
+            "select url from url_list where id = :id and password is null"
+        }
+    , params!{
         "id" => id,
+        "password" => if let Some(p) = new_password {
+            sha256(&p)
+        } else {
+            String::new()
+        },
     }).map(|r| {
         r.map(::mysql::from_row)
     }).map_err(|e| {
@@ -81,7 +92,7 @@ pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl
 // TODO transaction
 fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
     let id = generate_id();
-    let new_password = req.password.map(|s| s + &id.clone());
+    let new_password = req.password.map(|s| format!("{}{}", s, id));
     let url = req.url;
 
     let stat = pool.prepare(if new_password.is_some() {
@@ -97,7 +108,7 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
                 "password" => if let Some(p) = new_password {
                     sha256(&p)
                 } else {
-                    "".to_string()
+                    String::new()
                 },
                 "url" => url
             }).map_err(|e| {
