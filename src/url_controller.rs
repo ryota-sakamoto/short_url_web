@@ -1,25 +1,12 @@
 use actix_web::{
-    http::StatusCode,
-    error,
-    Error,
-    HttpRequest,
-    HttpMessage,
-    HttpResponse,
-    AsyncResponder,
+    error, http::StatusCode, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Path,
     Responder,
-    Path,
 };
+use crypto::{digest::Digest, sha2::Sha256};
 use futures::future::Future;
+use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use ApplicationState;
-use rand::{
-    Rng,
-    thread_rng,
-};
-use crypto::{
-    sha2::Sha256,
-    digest::Digest,
-};
 
 const ID_LEN: usize = 8;
 
@@ -30,38 +17,35 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
     let new_password = q.get("password").map(|s| format!("{}{}", s, id));
 
     let state = req.state();
-    let url_opt: Option<String> = state.pool.first_exec(
-        if new_password.is_some() {
-            "select url from url_list where id = :id and password = :password"
-        } else {
-            "select url from url_list where id = :id and password is null"
-        }
-    , params!{
-        "id" => id,
-        "password" => if let Some(p) = new_password {
-            sha256(&p)
-        } else {
-            String::new()
-        },
-    }).map(|r| {
-        r.map(::mysql::from_row)
-    }).map_err(|e| {
-        println!("[Error]{:?}", e);
-        error::ErrorInternalServerError("")
-    })?;
+    let url_opt: Option<String> = state
+        .pool
+        .first_exec(
+            if new_password.is_some() {
+                "select url from url_list where id = :id and password = :password"
+            } else {
+                "select url from url_list where id = :id and password is null"
+            },
+            params!{
+                "id" => id,
+                "password" => if let Some(p) = new_password {
+                    sha256(&p)
+                } else {
+                    String::new()
+                },
+            },
+        )
+        .map(|r| r.map(::mysql::from_row))
+        .map_err(|e| {
+            println!("[Error]{:?}", e);
+            error::ErrorInternalServerError("")
+        })?;
 
     Ok(match url_opt {
-        Some(u) => {
-            HttpResponse::Ok()
-                .status(StatusCode::MOVED_PERMANENTLY)
-                .header("Location", u)
-                .finish()
-        },
-        None => {
-            HttpResponse::Ok()
-                .status(StatusCode::NOT_FOUND)
-                .finish()
-        },
+        Some(u) => HttpResponse::Ok()
+            .status(StatusCode::MOVED_PERMANENTLY)
+            .header("Location", u)
+            .finish(),
+        None => HttpResponse::Ok().status(StatusCode::NOT_FOUND).finish(),
     })
 }
 
@@ -76,7 +60,9 @@ struct RegisterResponse {
     id: String,
 }
 
-pub fn register(req: HttpRequest<Arc<ApplicationState>>) -> Box<Future<Item=impl Responder, Error=Error>> {
+pub fn register(
+    req: HttpRequest<Arc<ApplicationState>>,
+) -> Box<Future<Item = impl Responder, Error = Error>> {
     let pool = {
         let r = req.clone();
         let state = r.state();
@@ -102,32 +88,27 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
     });
 
     match stat {
-        Ok(mut s) => {
-            s.execute(params!{
-                "id" => id.clone(),
-                "password" => if let Some(p) = new_password {
-                    sha256(&p)
-                } else {
-                    String::new()
-                },
-                "url" => url
-            }).map_err(|e| {
+        Ok(mut s) => s.execute(params!{
+            "id" => id.clone(),
+            "password" => if let Some(p) = new_password {
+                sha256(&p)
+            } else {
+                String::new()
+            },
+            "url" => url
+        }).map_err(|e| {
                 println!("{}", e);
                 error::ErrorInternalServerError(e)
-            }).map(|_| {
-                Ok(HttpResponse::Ok().json(RegisterResponse {
-                    id: id,
-                }))
-            })?
-        },
-        Err(e) => {
-            Err(error::ErrorInternalServerError(e))
-        },
+            })
+            .map(|_| Ok(HttpResponse::Ok().json(RegisterResponse { id: id })))?,
+        Err(e) => Err(error::ErrorInternalServerError(e)),
     }
 }
 
 fn generate_id() -> String {
-    let char_vec: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".chars().collect();
+    let char_vec: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+        .chars()
+        .collect();
     let mut rng = thread_rng();
     let mut id = String::new();
     for _ in 0..ID_LEN {
