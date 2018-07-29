@@ -1,10 +1,12 @@
+#!/bin/bash
+
 readonly MYSQL_ROOT_PASSWORD=root
 readonly CONTAINER_NAME=short_url_db
 
 function start() {
     docker stop $CONTAINER_NAME
     docker run --rm -itd --name $CONTAINER_NAME -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -p 3306:3360 mariadb
-    IP=$( docker exec -it $CONTAINER_NAME ip a | grep global | sed -e "s/inet\s\+\(.*\)\/16.*/\1/" | sed -e "s/ //g")
+    IP=$( docker exec $CONTAINER_NAME ip a | grep global | sed -e "s/inet\s\+\(.*\)\/16.*/\1/" | sed -e "s/ //g")
 
     while true
     do
@@ -16,7 +18,7 @@ function start() {
         sleep 5
     done
 
-    cargo build --release
+    /root/.cargo/bin/cargo build --release
     SHORT_URL_DB_IP=$IP ./target/release/short_url_web
 }
 

@@ -17,7 +17,6 @@ use actix_web::{
 };
 use std::{env, sync::Arc};
 mod url_controller;
-mod user_controller;
 
 #[derive(Debug)]
 pub struct ApplicationState {
