@@ -1,0 +1,10 @@
+[Unit]
+Description = Short URL Service
+
+[Service]
+WorkingDirectory = /root/short_url_web
+ExecStart = /root/short_url_web/run.sh start
+Restart = always
+
+[Install]
+WantedBy = multi-user.target
