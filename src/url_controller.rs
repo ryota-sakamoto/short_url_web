@@ -63,14 +63,14 @@ struct RegisterResponse {
 pub fn register(
     req: HttpRequest<Arc<ApplicationState>>,
 ) -> Box<Future<Item = impl Responder, Error = Error>> {
-    let pool = {
+    let (pool, hostname) = {
         let r = req.clone();
         let state = r.state();
-        state.pool.clone()
+        (state.pool.clone(), state.hostname.clone())
     };
     req.json()
         .from_err()
-        .and_then(validate_url)
+        .and_then(move |v| validate_url(v, hostname))
         .and_then(move |v| register_url(v, pool))
         .responder()
 }
@@ -118,8 +118,10 @@ fn generate_id() -> String {
     id
 }
 
-fn validate_url(req: RegisterRequest) -> Result<RegisterRequest, Error> {
-    if req.url.starts_with("http://") || req.url.starts_with("https://") {
+fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterRequest, Error> {
+    if (req.url.starts_with("http://") || req.url.starts_with("https://"))
+        && !req.url.contains(&hostname)
+    {
         Ok(req)
     } else {
         Err(error::ErrorBadRequest(""))

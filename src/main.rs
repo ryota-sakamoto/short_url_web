@@ -20,6 +20,7 @@ mod url_controller;
 
 #[derive(Debug)]
 pub struct ApplicationState {
+    hostname: String,
     pool: mysql::Pool,
 }
 
@@ -39,9 +40,17 @@ fn main() {
         .into_string()
         .unwrap();
 
+    let hostname = env::var_os("HOSTNAME")
+        .expect("SET HOSTNAME")
+        .into_string()
+        .unwrap();
+
     let pool = mysql::Pool::new(format!("mysql://root:root@{}:3306/short_url", db_ip))
         .expect("MySQL Pool Error");
-    let state = Arc::new(ApplicationState { pool: pool });
+    let state = Arc::new(ApplicationState {
+        pool: pool,
+        hostname: hostname,
+    });
 
     server::new(move || {
         App::with_state(state.clone())
