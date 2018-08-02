@@ -133,7 +133,3 @@ fn sha256(s: &str) -> String {
     hasher.input_str(s);
     hasher.result_str()
 }
-
-pub fn remove_url(_: HttpRequest) -> impl Responder {
-    HttpResponse::new(StatusCode::NOT_IMPLEMENTED)
-}
