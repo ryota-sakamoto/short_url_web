@@ -17,6 +17,7 @@ use actix_web::{
 };
 use std::{env, sync::Arc};
 mod controller;
+mod model;
 
 #[derive(Debug)]
 pub struct ApplicationState {
@@ -55,8 +56,16 @@ fn main() {
     server::new(move || {
         App::with_state(state.clone())
             .middleware(PostMiddleware)
-            .route("/register", http::Method::POST, controller::url_controller::register)
-            .route("/{id}", http::Method::GET, controller::url_controller::get_url)
+            .route(
+                "/register",
+                http::Method::POST,
+                controller::url_controller::register,
+            )
+            .route(
+                "/{id}",
+                http::Method::GET,
+                controller::url_controller::get_url,
+            )
     }).bind("127.0.0.1:8080")
         .expect("Server init error")
         .run();
