@@ -14,6 +14,10 @@ pub fn generate_id(len: usize) -> String {
     id
 }
 
+pub fn generate_password_hash(password: Option<String>, salt: &str) -> Option<String> {
+    password.map(|p| sha256(&format!("{}{}", p, salt)))
+}
+
 pub fn sha256(s: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.input_str(s);

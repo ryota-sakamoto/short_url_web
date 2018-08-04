@@ -14,7 +14,7 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
     let path = req.path();
     let id = path.replacen("/", "", 1);
     let q = req.query();
-    let new_password = q.get("password").map(|s| format!("{}{}", s, id));
+    let new_password = util::generate_password_hash(q.get("password").map(|s|s.to_string()), &id);
 
     let state = req.state();
     let url_result = url_list::find(&state.pool, id, new_password);
@@ -59,10 +59,10 @@ pub fn register(
 // TODO transaction
 fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
     let id = util::generate_id(ID_LEN);
-    let new_password = req.password.map(|s| format!("{}{}", s, id));
+    let new_password = util::generate_password_hash(req.password, &id);
     let url = req.url;
 
-    url_list::insert(&pool, id.clone(), new_password, url)
+    url_list::insert(&pool, &id, new_password, url)
         .map(|_| HttpResponse::Ok().json(RegisterResponse { id: id }))
         .map_err(|e| error::ErrorInternalServerError(e))
 }

@@ -1,5 +1,3 @@
-use super::super::controller::util;
-
 #[derive(Debug)]
 pub struct URL {
     pub url: String,
@@ -24,10 +22,9 @@ pub fn find(
         },
         params!{
             "id" => id,
-            "password" => if let Some(p) = password {
-                util::sha256(&p)
-            } else {
-                String::new()
+            "password" => match password {
+                Some(p) => p,
+                None => String::new(),
             },
         },
     ).map(|r| {
@@ -41,7 +38,7 @@ pub fn find(
 
 pub fn insert(
     pool: &::mysql::Pool,
-    id: String,
+    id: &str,
     password: Option<String>,
     url: String,
 ) -> Result<(), ::mysql::Error> {
@@ -53,11 +50,10 @@ pub fn insert(
 
     match stat {
         Ok(mut s) => s.execute(params!{
-            "id" => id.clone(),
-            "password" => if let Some(p) = password {
-                util::sha256(&p)
-            } else {
-                String::new()
+            "id" => id,
+            "password" => match password {
+                Some(p) => p,
+                None => String::new(),
             },
             "url" => url
         }).map(|_| Ok(()))?,
