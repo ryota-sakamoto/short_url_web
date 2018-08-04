@@ -76,3 +76,29 @@ fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterReques
         Err(error::ErrorBadRequest(""))
     }
 }
+
+#[test]
+fn validate_url_test() {
+    let f = |s: &str| {
+        RegisterRequest {
+            url: s.to_string(),
+            password: None,
+        }
+    };
+
+    let req = f("http://example.com");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_ok());
+
+    let req = f("https://example.com");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_ok());
+
+    let req = f("http://localhost");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_err());
+
+    let req = f("tcp://example.com");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_err());
+}
