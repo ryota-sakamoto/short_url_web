@@ -14,7 +14,7 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
     let path = req.path();
     let id = path.replacen("/", "", 1);
     let q = req.query();
-    let new_password = util::generate_password_hash(q.get("password").map(|s|s.to_string()), &id);
+    let new_password = util::generate_password_hash(q.get("password").map(|s| s.to_string()), &id);
 
     let state = req.state();
     let url_result = url_list::find(&state.pool, id, new_password);
@@ -66,18 +66,14 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
     let new_password = util::generate_password_hash(req.password, &id);
     let url = req.url;
 
-    url_list::find(&pool, id.clone(), new_password.clone()).map(|url_opt| {
-        match url_opt {
-            Some(_) => {
-                Err(error::ErrorBadRequest("Already Exists"))
-            },
-            None => {
-                url_list::insert(&pool, &id, new_password, url)
-                    .map(|_| HttpResponse::Ok().json(RegisterResponse { id: id }))
-                    .map_err(|e| error::ErrorInternalServerError(e))
-            },
-        }
-    }).map_err(|e| error::ErrorInternalServerError(e))
+    url_list::find(&pool, id.clone(), new_password.clone())
+        .map(|url_opt| match url_opt {
+            Some(_) => Err(error::ErrorBadRequest("Already Exists")),
+            None => url_list::insert(&pool, &id, new_password, url)
+                .map(|_| HttpResponse::Ok().json(RegisterResponse { id: id }))
+                .map_err(|e| error::ErrorInternalServerError(e)),
+        })
+        .map_err(|e| error::ErrorInternalServerError(e))?
 }
 
 fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterRequest, Error> {
@@ -92,12 +88,10 @@ fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterReques
 
 #[test]
 fn validate_url_test() {
-    let f = |s: &str| {
-        RegisterRequest {
-            id: None,
-            url: s.to_string(),
-            password: None,
-        }
+    let f = |s: &str| RegisterRequest {
+        id: None,
+        url: s.to_string(),
+        password: None,
     };
 
     let req = f("http://example.com");
