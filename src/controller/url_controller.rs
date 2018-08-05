@@ -19,15 +19,15 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
     let state = req.state();
     let url_result = url_list::find(&state.pool, id, new_password);
 
-    let url_opt = url_result.map_err(|e| error::ErrorInternalServerError(e))?;
-
-    Ok(match url_opt {
-        Some(u) => HttpResponse::Ok()
-            .status(StatusCode::MOVED_PERMANENTLY)
-            .header("Location", u.url)
-            .finish(),
-        None => HttpResponse::Ok().status(StatusCode::NOT_FOUND).finish(),
-    })
+    url_result
+        .map(|url_opt| match url_opt {
+            Some(u) => HttpResponse::Ok()
+                .status(StatusCode::MOVED_PERMANENTLY)
+                .header("Location", u.url)
+                .finish(),
+            None => HttpResponse::Ok().status(StatusCode::NOT_FOUND).finish(),
+        })
+        .map_err(|e| error::ErrorInternalServerError(e))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
