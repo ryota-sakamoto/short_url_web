@@ -8,12 +8,12 @@ extern crate futures;
 extern crate rand;
 
 use actix_web::{
-    error,
     http,
-    middleware::{Middleware, Started},
+    middleware::{Middleware, Finished},
     server,
     App,
     HttpRequest,
+    HttpResponse,
 };
 use std::{env, sync::Arc};
 mod controller;
@@ -25,13 +25,13 @@ pub struct ApplicationState {
     pool: mysql::Pool,
 }
 
-struct PostMiddleware;
-impl<S> Middleware<S> for PostMiddleware {
-    fn start(&self, req: &mut HttpRequest<S>) -> error::Result<Started> {
-        match req.method() {
-            &http::Method::POST => Ok(Started::Done),
-            _ => Ok(Started::Done),
+struct ErrorMiddleware;
+impl<S> Middleware<S> for ErrorMiddleware {
+    fn finish(&self, _: &mut HttpRequest<S>, res: &HttpResponse) -> Finished {
+        if let Some(error) = res.error() {
+            println!("[ERROR]{}", error);
         }
+        Finished::Done
     }
 }
 
@@ -55,7 +55,7 @@ fn main() {
 
     server::new(move || {
         App::with_state(state.clone())
-            .middleware(PostMiddleware)
+            .middleware(ErrorMiddleware)
             .route(
                 "/register",
                 http::Method::POST,
