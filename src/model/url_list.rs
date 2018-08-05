@@ -22,10 +22,7 @@ pub fn find(
         },
         params!{
             "id" => id,
-            "password" => match password {
-                Some(p) => p,
-                None => String::new(),
-            },
+            "password" => password.unwrap_or(String::new()),
         },
     ).map(|r| {
         r.map(|r| {
@@ -51,10 +48,7 @@ pub fn insert(
     match stat {
         Ok(mut s) => s.execute(params!{
             "id" => id,
-            "password" => match password {
-                Some(p) => p,
-                None => String::new(),
-            },
+            "password" => password.unwrap_or(String::new()),
             "url" => url
         }).map(|_| Ok(()))?,
         Err(e) => Err(e),

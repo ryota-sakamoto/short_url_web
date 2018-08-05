@@ -59,10 +59,7 @@ pub fn register(
 
 // TODO transaction
 fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Responder, Error> {
-    let id = match req.id {
-        Some(id) => id,
-        None => util::generate_id(ID_LEN),
-    };
+    let id = req.id.unwrap_or(util::generate_id(ID_LEN));
     let new_password = util::generate_password_hash(req.password, &id);
     let url = req.url;
 
