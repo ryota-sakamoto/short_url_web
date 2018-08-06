@@ -65,7 +65,7 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
 
     url_list::find(&pool, id.clone(), new_password.clone())
         .map(|url_opt| match url_opt {
-            Some(_) => Err(error::ErrorBadRequest("Already Exists")),
+            Some(_) => Err(error::ErrorBadRequest(format!("Already Exists ID: {}", id))),
             None => url_list::insert(&pool, &id, new_password, url)
                 .map(|_| HttpResponse::Ok().json(RegisterResponse { id: id }))
                 .map_err(|e| error::ErrorInternalServerError(e)),
@@ -79,7 +79,7 @@ fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterReques
     {
         Ok(req)
     } else {
-        Err(error::ErrorBadRequest(""))
+        Err(error::ErrorBadRequest(format!("Invalid URL: {}", req.url)))
     }
 }
 

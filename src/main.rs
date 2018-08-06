@@ -9,13 +9,13 @@ extern crate rand;
 
 use actix_web::{
     http,
-    middleware::{Middleware, Finished},
+    middleware::{Finished, Middleware},
     server,
     App,
     HttpRequest,
     HttpResponse,
 };
-use std::{env, sync::Arc};
+use std::{env, ffi::OsString, sync::Arc};
 mod controller;
 mod model;
 
@@ -37,12 +37,12 @@ impl<S> Middleware<S> for ErrorMiddleware {
 
 fn main() {
     let db_ip = env::var_os("SHORT_URL_DB_IP")
-        .expect("SET SHORT_URL_DB_IP")
+        .unwrap_or(OsString::from("localhost"))
         .into_string()
         .unwrap();
 
     let hostname = env::var_os("HOSTNAME")
-        .expect("SET HOSTNAME")
+        .unwrap_or(OsString::from("localhost"))
         .into_string()
         .unwrap();
 
