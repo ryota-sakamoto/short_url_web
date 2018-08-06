@@ -75,7 +75,8 @@ fn register_url(req: RegisterRequest, pool: ::mysql::Pool) -> Result<impl Respon
 
 fn validate_url(req: RegisterRequest, hostname: String) -> Result<RegisterRequest, Error> {
     if (req.url.starts_with("http://") || req.url.starts_with("https://"))
-        && !req.url.contains(&hostname)
+        && (!req.url.starts_with(&format!("http://{}", hostname))
+            && !req.url.starts_with(&format!("https://{}", hostname)))
     {
         Ok(req)
     } else {
@@ -102,6 +103,14 @@ fn validate_url_test() {
     let req = f("http://localhost");
     let result = validate_url(req, "localhost".to_string());
     assert!(result.is_err());
+
+    let req = f("https://localhost");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_err());
+
+    let req = f("http://example.com/localhost");
+    let result = validate_url(req, "localhost".to_string());
+    assert!(result.is_ok());
 
     let req = f("tcp://example.com");
     let result = validate_url(req, "localhost".to_string());
