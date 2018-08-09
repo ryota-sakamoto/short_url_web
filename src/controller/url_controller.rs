@@ -1,7 +1,7 @@
 use super::super::model::url_list;
 use super::util;
 use actix_web::{
-    error, http::StatusCode, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Path,
+    error, http::StatusCode, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
     Responder,
 };
 use futures::future::Future;
