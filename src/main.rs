@@ -15,7 +15,7 @@ use actix_web::{
     HttpRequest,
     HttpResponse,
 };
-use std::{env, ffi::OsString, sync::Arc};
+use std::{sync::Arc};
 mod controller;
 mod model;
 
@@ -36,21 +36,18 @@ impl<S> Middleware<S> for ErrorMiddleware {
 }
 
 fn main() {
-    let db_ip = env::var_os("SHORT_URL_DB_IP")
-        .unwrap_or(OsString::from("localhost"))
-        .into_string()
-        .unwrap();
+    let db_ip = option_env!("SHORT_URL_DB_IP").unwrap_or("localhost");
+    let hostname = option_env!("HOSTNAME").unwrap_or("localhost");
+    let db_user_name = option_env!("SHORT_URL_DB_USER").unwrap_or("root");
+    let db_user_password = option_env!("SHORT_URL_DB_PASSWORD").unwrap_or("");
+    let db_name = option_env!("SHORT_URL_DB_NAME").unwrap_or("short_url");
+    let db_port = option_env!("SHORT_URL_DB_PORT").unwrap_or("3306");
 
-    let hostname = env::var_os("HOSTNAME")
-        .unwrap_or(OsString::from("localhost"))
-        .into_string()
-        .unwrap();
-
-    let pool = mysql::Pool::new(format!("mysql://root:root@{}:3306/short_url", db_ip))
+    let pool = mysql::Pool::new(format!("mysql://{}:{}@{}:{}/{}", db_user_name, db_user_password, db_ip, db_port, db_name))
         .expect("MySQL Pool Error");
     let state = Arc::new(ApplicationState {
         pool: pool,
-        hostname: hostname,
+        hostname: hostname.to_string(),
     });
 
     server::new(move || {
