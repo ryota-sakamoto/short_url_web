@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["ryota-sakamoto <sakamo.ryota+github@gmail.com>"]
 
 [dependencies]
-actix-web = "0.6"
+actix-web = "1.0"
 mysql = "14.0.0"
 futures = "0.1"
 serde = "1.0"
