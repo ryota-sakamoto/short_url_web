@@ -16,26 +16,44 @@ use ApplicationState;
 
 const ID_LEN: usize = 8;
 
-pub fn get_url(req: HttpRequest) -> Result<impl Responder, Error> {
-    let path = req.path();
-    let id = path.replacen("/", "", 1);
-    let q = req.query_string();
-    let query: Query<HashMap<String, String>> = Query::from_query(q).unwrap();
-    let new_password = util::generate_password_hash(query.get("password").map(|s| s.to_string()), &id);
+#[derive(Clone)]
+pub struct URLController;
+impl URLController {
+    pub fn get_url(&self, req: HttpRequest) -> Result<impl Responder, Error> {
+        let path = req.path();
+        let id = path.replacen("/", "", 1);
+        let q = req.query_string();
+        let query: Query<HashMap<String, String>> = Query::from_query(q).unwrap();
+        let new_password = util::generate_password_hash(query.get("password").map(|s| s.to_string()), &id);
+    
+        let state: Option<&Arc<ApplicationState>> = req.app_data();
+        let state = state.unwrap();
+        let url_result = url_list::find(&state.pool, id, new_password);
+    
+        url_result
+            .map(|url_opt| match url_opt {
+                Some(u) => HttpResponse::Ok()
+                    .status(StatusCode::MOVED_PERMANENTLY)
+                    .header("Location", u.url)
+                    .finish(),
+                None => HttpResponse::Ok().status(StatusCode::NOT_FOUND).finish(),
+            })
+            .map_err(|e| error::ErrorInternalServerError(e))
+    }
 
-    let state: Option<&Arc<ApplicationState>> = req.app_data();
-    let state = state.unwrap();
-    let url_result = url_list::find(&state.pool, id, new_password);
-
-    url_result
-        .map(|url_opt| match url_opt {
-            Some(u) => HttpResponse::Ok()
-                .status(StatusCode::MOVED_PERMANENTLY)
-                .header("Location", u.url)
-                .finish(),
-            None => HttpResponse::Ok().status(StatusCode::NOT_FOUND).finish(),
-        })
-        .map_err(|e| error::ErrorInternalServerError(e))
+    pub fn register(
+        &self,
+        json: Json<RegisterRequest>,
+        req: HttpRequest,
+    ) -> Result<impl Responder, Error> {
+        let (pool, hostname) = {
+            let state: Option<&Arc<ApplicationState>> = req.app_data();
+            let state = state.unwrap();
+            (state.pool.clone(), state.hostname.clone())
+        };
+        
+        validate_url(json.0, hostname).and_then(move |v| register_url(v, pool))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,19 +66,6 @@ pub struct RegisterRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterResponse {
     id: String,
-}
-
-pub fn register(
-    json: Json<RegisterRequest>,
-    req: HttpRequest,
-) -> Result<impl Responder, Error> {
-    let (pool, hostname) = {
-        let state: Option<&Arc<ApplicationState>> = req.app_data();
-        let state = state.unwrap();
-        (state.pool.clone(), state.hostname.clone())
-    };
-    
-    validate_url(json.0, hostname).and_then(move |v| register_url(v, pool))
 }
 
 // TODO transaction

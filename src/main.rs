@@ -9,7 +9,7 @@ extern crate rand;
 
 use actix_web::{
     http,
-    // middleware::{Finished, Middleware},
+    middleware::Logger,
     HttpServer,
     App,
     HttpRequest,
@@ -26,16 +26,6 @@ pub struct ApplicationState {
     pool: mysql::Pool,
 }
 
-// struct ErrorMiddleware;
-// impl<S> Middleware<S> for ErrorMiddleware {
-//     fn finish(&self, _: &mut HttpRequest<S>, res: &HttpResponse) -> Finished {
-//         if let Some(error) = res.error() {
-//             println!("[ERROR]{}", error);
-//         }
-//         Finished::Done
-//     }
-// }
-
 fn main() {
     let db_ip = option_env!("SHORT_URL_DB_IP").unwrap_or("localhost");
     let hostname = option_env!("HOSTNAME").unwrap_or("localhost");
@@ -51,21 +41,28 @@ fn main() {
         hostname: hostname.to_string(),
     });
 
+    std::env::set_var("RUST_LOG", "actix_web=info");
+    env_logger::init();
+
     let app_host = hostname.to_string() + ":8080";
     println!("start server: {}", app_host);
 
+    let url_controller = &controller::url_controller::URLController{};
+
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .data(state.clone())
             .route(
                 "/register",
-                web::post().to(controller::url_controller::register)
+                web::post().to(move |v, vv| url_controller.register(v, vv))
             )
             .route(
                 "/{id}",
-                web::get().to(controller::url_controller::get_url)
+                web::get().to(move |v| url_controller.get_url(v))
             )
     }).bind(app_host)
         .expect("Server init error")
-        .run();
+        .run()
+        .unwrap();
 }
