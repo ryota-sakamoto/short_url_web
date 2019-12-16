@@ -1,6 +1,6 @@
-create database short_url;
+create database if not exists short_url;
 use short_url;
-create table url_list (
+create table short_url.url_list (
     id varchar(10) not null,
     password varchar(64),
     url varchar(255) not null

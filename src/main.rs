@@ -9,11 +9,12 @@ extern crate rand;
 
 use actix_web::{
     http,
-    middleware::{Finished, Middleware},
-    server,
+    // middleware::{Finished, Middleware},
+    HttpServer,
     App,
     HttpRequest,
     HttpResponse,
+    web,
 };
 use std::{sync::Arc};
 mod controller;
@@ -25,15 +26,15 @@ pub struct ApplicationState {
     pool: mysql::Pool,
 }
 
-struct ErrorMiddleware;
-impl<S> Middleware<S> for ErrorMiddleware {
-    fn finish(&self, _: &mut HttpRequest<S>, res: &HttpResponse) -> Finished {
-        if let Some(error) = res.error() {
-            println!("[ERROR]{}", error);
-        }
-        Finished::Done
-    }
-}
+// struct ErrorMiddleware;
+// impl<S> Middleware<S> for ErrorMiddleware {
+//     fn finish(&self, _: &mut HttpRequest<S>, res: &HttpResponse) -> Finished {
+//         if let Some(error) = res.error() {
+//             println!("[ERROR]{}", error);
+//         }
+//         Finished::Done
+//     }
+// }
 
 fn main() {
     let db_ip = option_env!("SHORT_URL_DB_IP").unwrap_or("localhost");
@@ -50,20 +51,21 @@ fn main() {
         hostname: hostname.to_string(),
     });
 
-    server::new(move || {
-        App::with_state(state.clone())
-            .middleware(ErrorMiddleware)
+    let app_host = hostname.to_string() + ":8080";
+    println!("start server: {}", app_host);
+
+    HttpServer::new(move || {
+        App::new()
+            .data(state.clone())
             .route(
                 "/register",
-                http::Method::POST,
-                controller::url_controller::register,
+                web::post().to(controller::url_controller::register)
             )
             .route(
                 "/{id}",
-                http::Method::GET,
-                controller::url_controller::get_url,
+                web::get().to(controller::url_controller::get_url)
             )
-    }).bind("127.0.0.1:8080")
+    }).bind(app_host)
         .expect("Server init error")
         .run();
 }

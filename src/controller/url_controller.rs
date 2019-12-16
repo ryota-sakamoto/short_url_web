@@ -1,22 +1,30 @@
 use super::super::model::url_list;
 use super::util;
 use actix_web::{
-    error, http::StatusCode, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
+    error, http::StatusCode, Error, HttpRequest, HttpResponse,
     Responder,
+    Result,
+    web::{
+        Query,
+        Json,
+    },
 };
 use futures::future::Future;
 use std::sync::Arc;
+use std::collections::HashMap;
 use ApplicationState;
 
 const ID_LEN: usize = 8;
 
-pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder, Error> {
+pub fn get_url(req: HttpRequest) -> Result<impl Responder, Error> {
     let path = req.path();
     let id = path.replacen("/", "", 1);
-    let q = req.query();
-    let new_password = util::generate_password_hash(q.get("password").map(|s| s.to_string()), &id);
+    let q = req.query_string();
+    let query: Query<HashMap<String, String>> = Query::from_query(q).unwrap();
+    let new_password = util::generate_password_hash(query.get("password").map(|s| s.to_string()), &id);
 
-    let state = req.state();
+    let state: Option<&Arc<ApplicationState>> = req.app_data();
+    let state = state.unwrap();
     let url_result = url_list::find(&state.pool, id, new_password);
 
     url_result
@@ -31,30 +39,28 @@ pub fn get_url(req: HttpRequest<Arc<ApplicationState>>) -> Result<impl Responder
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RegisterRequest {
+pub struct RegisterRequest {
     id: Option<String>,
     url: String,
     password: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RegisterResponse {
+pub struct RegisterResponse {
     id: String,
 }
 
 pub fn register(
-    req: HttpRequest<Arc<ApplicationState>>,
-) -> Box<Future<Item = impl Responder, Error = Error>> {
+    json: Json<RegisterRequest>,
+    req: HttpRequest,
+) -> Result<impl Responder, Error> {
     let (pool, hostname) = {
-        let r = req.clone();
-        let state = r.state();
+        let state: Option<&Arc<ApplicationState>> = req.app_data();
+        let state = state.unwrap();
         (state.pool.clone(), state.hostname.clone())
     };
-    req.json()
-        .from_err()
-        .and_then(move |v| validate_url(v, hostname))
-        .and_then(move |v| register_url(v, pool))
-        .responder()
+    
+    validate_url(json.0, hostname).and_then(move |v| register_url(v, pool))
 }
 
 // TODO transaction
