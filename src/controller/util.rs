@@ -8,7 +8,7 @@ pub fn generate_id(len: usize) -> String {
     let mut rng = thread_rng();
     let mut id = String::new();
     for _ in 0..len {
-        let n = rng.gen_range(0, char_vec.len());
+        let n = rng.gen_range(0..char_vec.len());
         id.push(char_vec[n]);
     }
     id

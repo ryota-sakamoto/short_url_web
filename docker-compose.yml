@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   api:
-    image: rust:1.39-stretch
+    image: rust:1.49.0-buster
     working_dir: /rust/src
     volumes:
       - .:/rust/src
